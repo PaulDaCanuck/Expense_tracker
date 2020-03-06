@@ -8,6 +8,7 @@
 #
 
 library(shiny)
+library(tidyverse)
 
 # Define UI for application that ingests a file and displays it
 ui <- fluidPage(
@@ -49,7 +50,10 @@ server <- function(input, output) {
         
         req(input$file1)
         
-        df <- read.csv(input$file1$datapath)
+        df <- read_csv(input$file1$datapath,
+                       col_names = TRUE,
+                       skip = 8
+                       )
         
         return(df)
         
