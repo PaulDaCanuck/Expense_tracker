@@ -35,8 +35,7 @@ ui <- fluidPage(
         # Main panel for displaying outputs
         mainPanel(
             
-            # Output: Data file
-            # tableOutput("contents")
+            # Output: Data table
             DTOutput("contents")
         )
     )
@@ -44,6 +43,7 @@ ui <- fluidPage(
 
 server <- function(input, output) {
     
+    #output the csv as a data table
     output$contents <- renderDT({
         
         # input$file1 will be NULL initially. After the user selects
@@ -51,16 +51,19 @@ server <- function(input, output) {
         # or all rows if selected, will be shown.
         
         req(input$file1)
-        
+      
+       
         # read the csv for the cc where the first 8 rows are blank      
         df <- read_csv(input$file1$datapath,
                        col_names = TRUE,
                        col_types = "iciidc",
                        skip = 8
+                       
         )
-        
-        
 
+        #set column name list
+        colnames(df) =  c("Number", "Card", "Transaction Date", "Posted Date", "Amount", "Description")
+        
         return(df)
       
     })
