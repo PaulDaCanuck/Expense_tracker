@@ -9,6 +9,7 @@
 
 library(shiny)
 library(tidyverse)
+library(DT)
 
 # Define UI for application that ingests a file and displays it
 ui <- fluidPage(
@@ -27,22 +28,23 @@ ui <- fluidPage(
                       multiple = FALSE,
                       accept = c("text/csv",
                                "text/comma-separated-values,text/plain",
-                               ".csv")),
-          
+                               ".csv"))
+      
             ),
 
         # Main panel for displaying outputs
         mainPanel(
             
             # Output: Data file
-            tableOutput("contents")
+            # tableOutput("contents")
+            DTOutput("contents")
         )
     )
 )
 
 server <- function(input, output) {
     
-    output$contents <- renderTable({
+    output$contents <- renderDT({
         
         # input$file1 will be NULL initially. After the user selects
         # and uploads a file, head of that data file by default,
@@ -50,14 +52,17 @@ server <- function(input, output) {
         
         req(input$file1)
         
+        # read the csv for the cc where the first 8 rows are blank      
         df <- read_csv(input$file1$datapath,
                        col_names = TRUE,
+                       col_types = "iciidc",
                        skip = 8
-                       )
+        )
         
+        
+
         return(df)
-        
-        
+      
     })
     
 }
