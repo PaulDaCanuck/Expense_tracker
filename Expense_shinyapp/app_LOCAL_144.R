@@ -15,23 +15,16 @@ library(DT)
 ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
-
             fileInput("file1", "Choose CSV File",
                       accept = c(
                           "text/csv",
                           "text/comma-separated-values,text/plain",
                           ".csv")
-
-            
-            
             ),
             
         ),
         mainPanel(
             DT::dataTableOutput("contents")
-
-            # Output: Data table
-
         )
     )
 )
@@ -40,33 +33,26 @@ ui <- fluidPage(
 
 server <- function(input, output) {
     
-
     output$contents <- DT::renderDataTable({
-
-    #output the csv as a data table
-    output$contents <- renderDT({
-
         
         # input$file1 will be NULL initially. After the user selects
         # and uploads a file, head of that data file by default,
         # or all rows if selected, will be shown.
         
         req(input$file1)
-
         
-         df <- read_csv(input$file1$datapath,
+        # df <- 
+        
+        read_csv(input$file1$datapath,
                         col_names = TRUE,
                         col_types = "ccc"
                        #skip = 8
                         )
- 
-
-        #set column name list
-        # colnames(df) =  c("Number", "Card", "Transaction Date", "Posted Date", "Amount", "Description")
         
-        return(df)
-      
-        })
+        
+        # return(df)
+        
+        
     })
     
 }
