@@ -30,6 +30,7 @@ ui <- fluidPage(
                                ".csv")),
           
             ),
+        
 
         # Main panel for displaying outputs
         mainPanel(
@@ -52,8 +53,10 @@ server <- function(input, output) {
         
         df <- read_csv(input$file1$datapath,
                        col_names = TRUE,
+                       col_types = "icdddc",
                        skip = 8
                        )
+        df
         
         return(df)
         
