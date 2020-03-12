@@ -9,41 +9,31 @@
 
 library(shiny)
 library(tidyverse)
+library(DT)
 
 # Define UI for application that ingests a file and displays it
 ui <- fluidPage(
-
-    # Application title
-    titlePanel("Upload and Explore Expense File"),
-
-    # Sidebar layout with input and output definitions 
     sidebarLayout(
-        
-        #Sidebar panel for inputs
         sidebarPanel(
-            
-            #Input: Select a file
-            fileInput("file1", "Choose CSV Expense File", 
-                      multiple = FALSE,
-                      accept = c("text/csv",
-                               "text/comma-separated-values,text/plain",
-                               ".csv")),
-          
+            fileInput("file1", "Choose CSV File",
+                      accept = c(
+                          "text/csv",
+                          "text/comma-separated-values,text/plain",
+                          ".csv")
             ),
-        
-
-        # Main panel for displaying outputs
-        mainPanel(
             
-            # Output: Data file
-            tableOutput("contents")
+        ),
+        mainPanel(
+            DT::dataTableOutput("contents")
         )
     )
 )
 
+
+
 server <- function(input, output) {
     
-    output$contents <- renderTable({
+    output$contents <- DT::renderDataTable({
         
         # input$file1 will be NULL initially. After the user selects
         # and uploads a file, head of that data file by default,
@@ -51,14 +41,16 @@ server <- function(input, output) {
         
         req(input$file1)
         
-        df <- read_csv(input$file1$datapath,
-                       col_names = TRUE,
-                       col_types = "icdddc",
-                       skip = 8
-                       )
-        df
+        # df <- 
         
-        return(df)
+        read_csv(input$file1$datapath,
+                        col_names = TRUE,
+                        col_types = "ccc"
+                       #skip = 8
+                        )
+        
+        
+        # return(df)
         
         
     })
