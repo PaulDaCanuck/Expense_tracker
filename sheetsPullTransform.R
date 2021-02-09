@@ -6,7 +6,7 @@ library(googledrive)
 library(lubridate)
 library(dplyr)
 library(tidyr)
-library(scal)
+library(ggplot2)
 
 # read transactions data and basic manipulation
 
@@ -40,17 +40,36 @@ monthlyTrackingDetail <- transactions %>%
   group_by(trDate, transactionType, transactionSubType) %>%
   summarise(monthlyAmt = sum(transactionBalance))  
 
+# merge and manipulate monthly transactions 
 
-
-# compare monthly ammounts to budget expectations
-
-monthlyCompare <- merge(x = monthlyTracking, y = budget, by = "transactionType" ) %>%
-  within(rm(annualValueEst)) %>%
+monthlyCompare <- merge(x = monthlyTracking, y = budget, by = "transactionType") %>%
+  filter(transactionTypeCat == "Expense") %>%
+  within(rm(annualValueEst, transactionTypeCat)) %>%
   mutate("absDiff" = monthlyAmt + budgetMonthly) %>%
   mutate("pctDiff" = 100 * (1 - ((monthlyAmt + budgetMonthly) / budgetMonthly)))
 
+monthlyCompare$pctDiffCat <- cut(monthlyCompare$pctDiff,
+                     breaks=c(-Inf, 75, 125, Inf),
+                     labels=c("low","medium","high"))
 
+# pivot differences to compare by month
 
+monthlyAbsDiff <- monthlyCompare %>%
+  within(rm(monthlyAmt, pctDiff)) %>% 
+  pivot_wider(names_from = trDate, values_from = "absDiff", values_fill = 0)
+
+monthlyPctDiff <- monthlyCompare %>%
+  within(rm(monthlyAmt, absDiff)) %>%
+  pivot_wider(names_from = trDate, values_from = "pctDiff", values_fill = 0)
+
+# visualize monthly diffences
+
+bc <- ggplot(monthlyCompare, aes(x=transactionType, y=pctDiff, fill=pctDiffCat))+
+  geom_bar(stat='identity')+
+  facet_wrap(~ trDate) +
+  labs(title = "Comparing Expenses to Budget", y = "Percent Difference", x = "") 
+  
+bc + coord_flip()
 
 
 
