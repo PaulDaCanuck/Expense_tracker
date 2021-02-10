@@ -8,6 +8,8 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
+theme_set(theme_minimal())
+
 # read transactions data and basic manipulation
 
 transactions <- 
@@ -64,12 +66,20 @@ monthlyPctDiff <- monthlyCompare %>%
 
 # visualize monthly diffences
 
-bc <- ggplot(monthlyCompare, aes(x=transactionType, y=pctDiff, fill=pctDiffCat))+
-  geom_bar(stat='identity')+
+my_colours <- c("green", "blue", "orange") # vector of colours
+
+
+bc <- ggplot(monthlyCompare) +
+  geom_hline(yintercept = 100, colour = "grey", linetype = "longdash", ) +
+  geom_bar(aes(x=transactionType, y=pctDiff, fill=pctDiffCat), stat='identity', show.legend = FALSE) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_blank()) +
   facet_wrap(~ trDate) +
-  labs(title = "Comparing Expenses to Budget", y = "Percent Difference", x = "") 
-  
-bc + coord_flip()
+  labs(title = "Comparing Expenses to Budget", y = "Percent Difference", x = "") + 
+  scale_fill_manual(values = my_colours) + 
+  coord_flip()
+
+bc 
+    
 
 
 
