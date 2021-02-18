@@ -15,7 +15,7 @@ theme_set(theme_minimal())
 transactions <- 
   read_sheet(ss= "1rsdSUAK7aN5_XxvlgcxuEpgyJNhbN8QJdAzJDxLhKbQ", 
              sheet = "transactionLanding", 
-             col_types = "_cD____ddcc__") %>% 
+             col_types = "_cD____ddcc") %>% 
   replace_na( list("transactionDebit" = 0, "transactionCredit" = 0)) %>% 
   mutate("transactionBalance" = transactionCredit + transactionDebit) %>%
   mutate("trDate" = format(as.Date(transactionDate), "%Y-%m")) %>%
@@ -35,20 +35,29 @@ monthlyTracking <- transactions %>%
   group_by(trDate, transactionType) %>%
   summarise(monthlyAmt = sum(transactionBalance)) 
 
-# %>% pivot_wider(names_from = trDate, values_from = monthlyAmt, values_fill= 0)  
-# %>% write_sheet(ss= "1rsdSUAK7aN5_XxvlgcxuEpgyJNhbN8QJdAzJDxLhKbQ", sheet = "monthlyTracking")
+
+# calculate the number of months for which there is data
+
+elapsedMonths <- as.numeric(length(unique(monthlyCompare$trDate))) 
+
+
+# similar monthly summary table to monthlyTracking but preserving transactionSubType 
 
 monthlyTrackingDetail <- transactions %>%
   group_by(trDate, transactionType, transactionSubType) %>%
   summarise(monthlyAmt = sum(transactionBalance))  
 
-# merge and manipulate monthly transactions 
+
+# merge and manipulate monthly transactions with budget 
 
 monthlyCompare <- merge(x = monthlyTracking, y = budget, by = "transactionType") %>%
   filter(transactionTypeCat == "Expense") %>%
   within(rm(annualValueEst, transactionTypeCat)) %>%
   mutate("absDiff" = monthlyAmt + budgetMonthly) %>%
   mutate("pctDiff" = 100 * (1 - ((monthlyAmt + budgetMonthly) / budgetMonthly)))
+
+
+# create breaks in a categorical variable to help with colouring the charts
 
 monthlyCompare$pctDiffCat <- cut(monthlyCompare$pctDiff,
                      breaks=c(-Inf, 75, 125, Inf),
@@ -64,22 +73,28 @@ monthlyPctDiff <- monthlyCompare %>%
   within(rm(monthlyAmt, absDiff)) %>%
   pivot_wider(names_from = trDate, values_from = "pctDiff", values_fill = 0)
 
-# visualize monthly diffences
+# visualize monthly % diffences from budget in facet by month
 
-my_colours <- c("green", "blue", "orange") # vector of colours
-
+my_colours <- c("green", "blue", "orange") # vector of colours used to fill bars based on % of monthly budget spent
 
 bc <- ggplot(monthlyCompare) +
-  geom_hline(yintercept = 100, colour = "grey", linetype = "longdash", ) +
+  geom_hline(yintercept = 100, colour = "grey", linetype = "longdash") +
   geom_bar(aes(x=transactionType, y=pctDiff, fill=pctDiffCat), stat='identity', show.legend = FALSE) +
+  geom_text(aes( 0, 100, label = "100%", vjust = -1, hjust = -0.1), size = 3, colour = "grey") +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_blank()) +
   facet_wrap(~ trDate) +
   labs(title = "Comparing Expenses to Budget", y = "Percent Difference", x = "") + 
   scale_fill_manual(values = my_colours) + 
   coord_flip()
-
 bc 
     
+# visualize YTD spending against budget
+
+ytdCompare <- merge(x = monthlyTracking, y = budget, by = "transactionType") %>%
+  group_by(transactionType) %>%
+  summarise(ytdAmount = sum(monthlyAmt), meanBudget = mean(budgetMonthly)) %>%
+  mutate("ytdBudget" = meanBudget * elapsedMonths) %>%
+  mutate("ytdPctDiff" = abs(100 * (1 - ((ytdAmount + ytdBudget) / ytdBudget))))
 
 
 
