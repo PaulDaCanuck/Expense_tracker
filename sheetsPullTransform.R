@@ -8,6 +8,7 @@ library(dplyr)
 library(tidyr)
 library(scales)
 library(ggplot2)
+library(forcats)
 
 theme_set(theme_minimal())
 
@@ -28,7 +29,7 @@ budget <-
   read_sheet(ss = "1rsdSUAK7aN5_XxvlgcxuEpgyJNhbN8QJdAzJDxLhKbQ", 
              sheet = "budgetAnnual", 
              col_types = "cdc")  %>%
-  mutate("budgetMonthly" = annualValueEst / 12)
+  mutate("budgetMonthly" = if_else(transactionTypeCat == "Income", annualValueEst, -1 * annualValueEst) / 12)
 
 # create monthly summary table grouped by transaction categories and month  
 # monthlyTrackingDetail includes subType
@@ -51,7 +52,7 @@ monthlyCompare <- merge(x = monthlyTracking, y = budget, by = "transactionType")
   filter(transactionTypeCat == "Expense") %>%
   within(rm(annualValueEst, transactionTypeCat)) %>%
   mutate("absDiff" = monthlyAmt + budgetMonthly) %>%
-  mutate("pctDiff" = 100 * (1 - ((monthlyAmt + budgetMonthly) / budgetMonthly)))
+  mutate("pctDiff" = 100 * (1 - ((monthlyAmt + budgetMonthly) / budgetMonthly))) 
 
 
 # create breaks in a categorical variable to help with colouring the charts
@@ -91,28 +92,29 @@ ytdCompare <- merge(x = monthlyTracking, y = budget, by = "transactionType") %>%
   group_by(transactionType) %>%
   summarise(ytdAmount = sum(monthlyAmt), meanBudget = mean(budgetMonthly)) %>%
   mutate("ytdBudget" = meanBudget * elapsedMonths) %>%
-  mutate("ytdPctDiff" = abs(100 * (1 - ((ytdAmount + ytdBudget) / ytdBudget)))) %>%
-  arrange(desc(ytdBudget))
-
-                                                              
-
-# create breaks in a categorical variable to help with colouring the charts
-
-ytdCompare$pctDiffCat <- cut(ytdCompare$ytdPctDiff,
-                                 breaks=c(-Inf, 75, 125, Inf),
-                                 labels=c("low","medium","high"))
-# ytdCompare$ytdPctDiff <- factor(ytdCompare$ytdPctDiff, levels = sort(unique(ytdCompare$ytdBudget[order(sort(unique(ytdCompare$ytdBudget)))])))
-
+  mutate("ytdPctDiff" = -100 * (1 - ((ytdAmount + ytdBudget) / ytdBudget))) %>%
+  arrange(abs(ytdBudget)) %>%    # First sort by val. This sort the dataframe but NOT the factor levels
+  mutate(transactionType = factor(transactionType, levels=transactionType)) %>%
+  # create breaks in a categorical variable to help with colouring the charts
+  mutate("pctDiffCat" = cut(ytdCompare$ytdPctDiff,
+                            breaks=c(-Inf, 75, 125, Inf),
+                            labels=c("low","medium","high"))) 
 
 lastMonth = max(transactions$trDate)
 stLT <- paste(elapsedMonths, "months up to", lastMonth, sep=" " )
 ytdPDlabel <- percent(ytdCompare$ytdPctDiff / 100, accuracy = 1)
+
+write_sheet(monthlyCompare, ss= "1rsdSUAK7aN5_XxvlgcxuEpgyJNhbN8QJdAzJDxLhKbQ", 
+            sheet = "monthlyCompare")
+write_sheet(ytdCompare, ss= "1rsdSUAK7aN5_XxvlgcxuEpgyJNhbN8QJdAzJDxLhKbQ", 
+           sheet = "ytdCompare")
+
 # ytd vis
 
-ytdVis <- ggplot(ytdCompare) +
+ytdPCtVis <- ggplot(ytdCompare) +
   geom_hline(yintercept = 100, colour = "grey", linetype = "longdash") +
   geom_bar(aes(x=transactionType, y=ytdPctDiff, fill=pctDiffCat), stat='identity', show.legend = FALSE) +
-  geom_text(aes( 0, 100, label = "100%", vjust = -.1, hjust = -0.1), size = 3, colour = "grey") +
+  geom_text(aes( 0, 100, label = "100%", vjust = 0, hjust = -0.1), size = 3, colour = "grey") +
   geom_text(aes(x=transactionType, y=1, label= ytdPDlabel), vjust=0.3, colour="white", size=4, fontface=2, hjust=0) + 
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(), 
@@ -124,5 +126,5 @@ ytdVis <- ggplot(ytdCompare) +
        x = "") + 
   scale_fill_manual(values = my_colours) + 
   coord_flip()
-ytdVis
+ytdPCtVis
 
