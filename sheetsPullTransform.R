@@ -93,12 +93,12 @@ ytdCompare <- merge(x = monthlyTracking, y = budget, by = "transactionType") %>%
   mutate("ytdBudget" = meanBudget * elapsedMonths) %>%
   mutate("ytdPctDiff" = -100 * (1 - ((ytdAmount + ytdBudget) / ytdBudget))) %>%
   arrange(abs(ytdBudget)) %>%    # First sort by val. This sort the dataframe but NOT the factor levels
-  mutate(transactionType = factor(transactionType, levels=transactionType))  %>%
-  # create breaks in a categorical variable to help with colouring the charts
-  mutate("pctDiffCat" = cut(ytdCompare$ytdPctDiff,
-                           breaks=c(-Inf, 75, 125, Inf),
-                           labels=c("low","medium","high"))) 
+  mutate(transactionType = factor(transactionType, levels=transactionType))  
 
+# create breaks in a categorical variable to help with colouring the charts
+ytdCompare$pctDiffCat <- cut(ytdCompare$ytdPctDiff,
+                                 breaks=c(-Inf, 75, 125, Inf),
+                                 labels=c("low","medium","high"))
 
 
 ## ytd vis
